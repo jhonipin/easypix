@@ -233,7 +233,7 @@ function cancelarTemporizador(txid: string) {
 
 
 
-app.get('/status', (req, res) => {
+app.get('/', (req, res) => {
     
     const uniqueIds = Array.from(new Set(idMaquinasArray));
     const optionsHtml = uniqueIds.map(id => `<option value="${id}">${id}</option>`).join('');
