@@ -28,40 +28,103 @@ var valorJogado: Number;
 var txidmaq: string;
 var valorDoPix = 0;
 var valorAux = 0;
+var valorAux2 : any;
 var ticket = 1;
 let newIdMaquina2 = idMaquina as string; 
+var identificador: any;
+var identificadordev: any;
 var endToEndId: any;
 var devendToEndId: any;
 var devolutions: any;
 var myId = "000123";
 const idMaquinasArray: string[] = [];
+const idPixRealizadosArray: string[] = [];
 interface Timers {
     [txid: string]: NodeJS.Timeout; // O tipo de cada propriedade é NodeJS.Timeout
 }
 
 const timers: Timers = {}; // Crie o objeto timers com o tipo definido
+app.post('/liberar-pulso', (req, res) => {
+    // Lógica para liberar o pulso da máquina
+    // Substitua este código com a lógica real para liberar o pulso
+    const selectedId = req.body.idSelecionado;
+    // Alterar o status da máquina
+    
+    valorDoPix = inputValue;
+    txidmaq = selectedId.toString();
+    identificador = txidmaq + valorDoPix;
+    
+   
+    // Se ocorrer um erro ao liberar o pulso:
+    return res.status(200).json({ retorno: 'ok', message:'ENVIANDO PULSOS AGUARDE' + identificador});
+   
+});
+app.get('/rotapulso-app', (req, res) => {
+    // Lógica para aumentar o valor jogado
+    const newvalor = req.query.valor as string; 
+    const newmaquina = req.query.maquina as string; 
+    valorDoPix = Number( newvalor);
+    txidmaq = newmaquina.toString();
+    
+    
+   
+    // Se ocorrer um erro ao liberar o pulso:
+    return res.status(200).json({ retorno: 'ok', message:'ENVIANDO PULSOS AGUARDE'});
+});
 
 app.get('/aumentar-valor', (req, res) => {
     // Lógica para aumentar o valor jogado
+
+    const entrada = identificadordev;
+    const partes = entrada.split("=");
+    if (partes.length === 3) {
+        var idmaq = partes[0];
+        var val = partes[1];
+        var endt = partes[2];
+        
+        console.log("id maquina:", idmaq);
+        console.log("valor:", val);
+        console.log("endtoendid:", val);
+        }
+
+
+
     newIdMaquina2 = req.query.idMaquina as string; 
-   
 
-    cancelarTemporizador(endToEndId); // Reinicia o timer
-
+    const index = idPixRealizadosArray.indexOf(identificadordev);
+    console.log("index" + idPixRealizadosArray)
+    if (index !== -1) {
+        idMaquinasArray.splice(index, 1); // Remove 1 elemento no índice 'index'
+        console.log("Pix R$1.00 creditado:")
+    } else {
+        console.log("Pix não encontrado"  )
+    }
+    console.log(newIdMaquina2 + "=" + valorDoPix + "=" + endToEndId);
+    cancelarTemporizador(newIdMaquina2 + "=" + valorDoPix + "=" + endToEndId); // Reinicia o timer
+    if( txidmaq = newIdMaquina2)
+    {
+        valorDoPix = 0;
+    }
 
     if (!valoresJogados[newIdMaquina2]) {
         valoresJogados[newIdMaquina2] = 0; // Inicializa o valor se ainda não existir
     }
     valoresJogados[newIdMaquina2] += 1;
-    
-    // Atualize o valor jogado no arquivo
-    fs.writeFile(`${newIdMaquina2}.txt`, valoresJogados[newIdMaquina2].toString(), (error: any) => {
-            if (error) {
-            console.error('Erro ao atualizar o valor jogado:', error);
-            return res.status(500).json({ retorno: 'error' });
-        }
-        return res.status(200).json({ retorno: 'success' });
-    });
+    if (!fs.existsSync(`${newIdMaquina2}.txt`)) {
+        fs.writeFileSync(`${newIdMaquina2}.txt`, '0', 'utf-8'); // Cria o arquivo se não existir
+    }
+    else
+    {
+   // Atualize o valor jogado no arquivo
+   fs.writeFile(`${newIdMaquina2}.txt`, valoresJogados[newIdMaquina2].toString(), (error: any) => {
+    if (error) {
+    console.error('Erro ao atualizar o valor jogado:', error);
+    return res.status(500).json({ retorno: 'error' });
+}
+return res.status(200).json({ retorno: 'success' });
+});
+    }
+ 
 });
 
 
@@ -86,20 +149,28 @@ function lerValorJogado(idMaquina: string): number {
 
 app.get('/ligar-maquina', (req, res) => {
         idMaquina = req.query.idMaquina as string | undefined;
+
+        
         const newIdMaquina = req.query.idMaquina as string; 
 
-        idMaquinasArray.push(newIdMaquina); 
-        cancelarTemporizadorID(newIdMaquina);
+    // Verifica se a string já existe no array
+    if (idMaquinasArray.indexOf(newIdMaquina) === -1) {
+        // Se não existir, adiciona ao array
+        idMaquinasArray.push(newIdMaquina);
+    }
+            cancelarTemporizadorID(newIdMaquina);
   
    // Lógica para autorização ou autenticação aqui
    // Certifique-se de validar a autenticidade e autorização adequadas antes de modificar o status
-   aguardarRespostaID(newIdMaquina, 10000);
+   aguardarRespostaID(newIdMaquina, 25000);
 
 
    return res.status(200).send(`ID da Máquina: ${idMaquina}`); // Exibe o ID da máquina no HTML
 });
 
-
+app.get('/lista-maquinas', (req, res) => {
+    return res.status(200).json({ idMaquinasArray });
+});
 
 
 
@@ -108,6 +179,7 @@ function aguardarRespostaID(txid: string, timeout: number) {
         const maquinaDesconectar = txid;
 
         const index = idMaquinasArray.indexOf(maquinaDesconectar);
+        console.log("index" + idMaquinasArray)
         if (index !== -1) {
             idMaquinasArray.splice(index, 1); // Remove 1 elemento no índice 'index'
             console.log("Maquina removida:" + txid)
@@ -132,7 +204,28 @@ function cancelarTemporizadorID(txid: string) {
 
 
 
+app.get("/consulta-final-mac01-19c97b15", async (req, res) => {
+    if (valorDoPix > 0 && valorDoPix >= ticket ) {
+         
+       
+        var parte1 = identificador.substring(0, 11); // maquina0003
+        var parte2 = identificador.substring(11);    // 1.00
+        valorAux = parte2;
+        //creditos
+        var creditos = valorAux / ticket;
+        creditos = Math.floor(creditos);
+        var pulsos = creditos * ticket;
+        var pulsosFormatados = ("0000" + pulsos).slice(-4);
+        if(devendToEndId == parte1 + parte2)
+        {
+        valorAux = 0;
+        }
 
+        return res.status(200).json({ "retorno": pulsosFormatados + parte1 });
+    } else {
+        return res.status(200).json({ "retorno":"0000" });
+    }
+});
 
 
 
@@ -142,9 +235,9 @@ function cancelarTemporizadorID(txid: string) {
 
 app.get("/consulta-jhony-mac01-19c97b15", async (req, res) => {
     if (valorDoPix > 0 && valorDoPix >= ticket ) {
-
+         
         valorAux = valorDoPix;
-        valorDoPix = 0;
+       
         //creditos
         var creditos = valorAux / ticket;
         creditos = Math.floor(creditos);
@@ -188,11 +281,20 @@ app.post("/rota-recebimento", async (req, res) => {
             valorDoPix = req.body.pix[0].valor;
             console.log(req.body.pix[0].valor);
         }
-
+   
         endToEndId = req.body.pix[0].endToEndId;
         txidmaq = req.body.pix[0].txid;
-        devolutions = req.body.pix[0].devolucoes;        
-        aguardarResposta(endToEndId, 15000);
+        devolutions = req.body.pix[0].devolucoes;   
+        identificador = txidmaq + valorDoPix;
+        identificadordev = txidmaq + "=" + valorDoPix + "=" + endToEndId;  
+        console.log("identificador: " + identificador);
+        console.log("identificador dev: " + identificadordev);
+            // Verifica se a string já existe no array
+    if (idPixRealizadosArray.indexOf(identificadordev) === -1) {
+        // Se não existir, adiciona ao array
+        idPixRealizadosArray.push(identificadordev);
+    }
+        aguardarResposta(identificadordev, 25000);
     
     } catch (error) {
         console.error(error);
@@ -203,18 +305,28 @@ app.post("/rota-recebimento", async (req, res) => {
 
 function aguardarResposta(txid: string, timeout: number) {
     const timer = setTimeout(() => {
-
-        if(valorAux > 0)
+        if(devolutions == null)
         {
-            devendToEndId = txid; 
-           if(devolutions == null){
-            
-            estornar();
-           }
-            
-
+            const entrada = txid;
+            const partes = entrada.split("=");
+            if (partes.length === 3) {
+                var parte1 = partes[0];
+                var parte2 = partes[1];
+                var parte3 = partes[2];
+                
+                console.log("Parte 1:", parte1);
+                console.log("Parte 2:", parte2);
+                console.log("Parte 3:", parte3);
+                 valorAux2 = parte2;
+                 devendToEndId = parte3;
+              }
+                estornar();                
+    
         }
+
+        
         delete timers[txid]; // Remover o temporizador após o estorno
+        
     }, timeout);
 
     timers[txid] = timer;
@@ -233,7 +345,7 @@ function cancelarTemporizador(txid: string) {
 
 
 
-app.get('/', (req, res) => {
+app.get('/status', (req, res) => {
     
     const uniqueIds = Array.from(new Set(idMaquinasArray));
     const optionsHtml = uniqueIds.map(id => `<option value="${id}">${id}</option>`).join('');
@@ -385,21 +497,7 @@ app.get('/setar_pulsos', (req, res) => {
     res.json(retorno);
 });
 
-app.post('/liberar-pulso', (req, res) => {
-    // Lógica para liberar o pulso da máquina
-    // Substitua este código com a lógica real para liberar o pulso
-    const selectedId = req.body.idSelecionado;
-    // Alterar o status da máquina
-    
-    valorDoPix = inputValue;
-    txidmaq = selectedId.toString();
-    
-    
-   
-    // Se ocorrer um erro ao liberar o pulso:
-    return res.status(200).json({ retorno: 'ok', message:'ENVIANDO PULSOS AGUARDE'});
-   
-});
+
 function generateRandomId(length: number) {
     const characters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
     let randomId = '';
@@ -440,7 +538,7 @@ async function estornar() {
     myId = randomId;
 
      let body = {
-       valor: valorAux,
+       valor: valorAux2,
    }
    
    let params = {
